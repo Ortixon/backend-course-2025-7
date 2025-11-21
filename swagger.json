@@ -1,0 +1,222 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Inventory API",
+    "version": "1.0.0",
+    "description": "API сервісу інвентаризації"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/register": {
+      "post": {
+        "summary": "Реєстрація нового пристрою",
+        "description": "Реєстрація пристрою через веб форму (multipart/form-data)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "inventory_name": {
+                    "type": "string",
+                    "description": "Назва пристрою (обов'язково)"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Опис пристрою"
+                  },
+                  "photo": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Фотографія пристрою"
+                  }
+                },
+                "required": ["inventory_name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Пристрій успішно створено"
+          },
+          "400": {
+            "description": "Не вказано обов'язкове поле inventory_name"
+          }
+        }
+      }
+    },
+    "/search": {
+      "post": {
+        "summary": "Пошук пристрою",
+        "description": "Пошук за ID з можливістю додати посилання на фото в опис",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "ID пристрою"
+                  },
+                  "has_photo": {
+                    "type": "string",
+                    "enum": ["true", "false"],
+                    "description": "Якщо 'true', додає посилання на фото до опису"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Пристрій знайдено"
+          },
+          "404": {
+            "description": "Пристрій не знайдено"
+          }
+        }
+      }
+    },
+    "/inventory": {
+      "get": {
+        "summary": "Отримати весь список",
+        "responses": {
+          "200": {
+            "description": "Список інвентарю",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Item"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventory/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Отримати інформацію про річ",
+        "responses": {
+          "200": {
+            "description": "Інформація про річ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Item"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Оновити ім'я або опис",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Оновлено успішно" },
+          "404": { "description": "Not Found" }
+        }
+      },
+      "delete": {
+        "summary": "Видалити річ",
+        "responses": {
+          "200": { "description": "Видалено успішно" },
+          "404": { "description": "Not Found" }
+        }
+      }
+    },
+    "/inventory/{id}/photo": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "get": {
+        "summary": "Отримати фото речі",
+        "responses": {
+          "200": {
+            "description": "Зображення (image/jpeg)",
+            "content": {
+              "image/jpeg": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          },
+          "404": { "description": "Фото або річ не знайдено" }
+        }
+      },
+      "put": {
+        "summary": "Оновити фото речі",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "photo": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Фото оновлено" },
+          "404": { "description": "Not Found" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Item": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "photoUrl": { "type": "string", "nullable": true }
+        }
+      }
+    }
+  }
+}

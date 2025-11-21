@@ -5,6 +5,9 @@ const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
 const crypto = require('crypto');
+// --- 1. Додаємо модулі для Swagger ---
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json'); 
 
 program
   .requiredOption('-h, --host <type>', 'Адреса сервера')
@@ -35,6 +38,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
+// --- 2. Підключаємо Swagger UI ---
+// Документація буде доступна за адресою http://host:port/docs
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 const findItem = (id) => db.find(i => i.id === id);
 const findIndex = (id) => db.findIndex(i => i.id === id);
 
@@ -60,6 +67,7 @@ app.post('/search', (req, res) => {
     return res.status(404).send('Not Found');
   }
   let result = { ...item };
+  // Завдання вимагає перевірку прапорця для додавання лінку на фото в опис
   if (req.body.has_photo === 'true' && result.photoUrl) {
     result.description = `${result.description} (Фото: ${result.photoUrl})`;
   }
@@ -111,6 +119,11 @@ app.route('/inventory/:id/photo')
     if (!req.file) {
       return res.status(400).send('File not uploaded');
     }
+    // Видалення старого фото (опціонально, гарний тон)
+    if (item.photoPath && fs.existsSync(item.photoPath)) {
+        try { fs.unlinkSync(item.photoPath); } catch(e) {}
+    }
+    
     item.photoPath = req.file.path;
     item.photoUrl = `/inventory/${item.id}/photo`;
     res.status(200).json(item);
@@ -123,5 +136,6 @@ app.use((req, res) => {
 
 app.listen(port, host, () => {
   console.log(`Сервер запущено: http://${host}:${port}`);
+  console.log(`Документація Swagger: http://${host}:${port}/docs`);
   console.log(`Директорія кешу: ${cacheDir}`);
 });
