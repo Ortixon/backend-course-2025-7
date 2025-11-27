@@ -1,0 +1,326 @@
+{
+  "info": {
+    "_postman_id": "55e30a0d-f829-423b-8203-730d294a7274",
+    "name": "My Collection",
+    "description": "### Welcome to Postman! This is your first collection. \n\nCollections are your starting point for building and testing APIs. You can use this one to:\n\n• Group related requests\n• Test your API in real-world scenarios\n• Document and share your requests\n\nUpdate the name and overview whenever you’re ready to make it yours.\n\n[Learn more about Postman Collections.](https://learning.postman.com/docs/collections/collections-overview/)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "50057853",
+    "_collection_link": "https://ortixon-1960477.postman.co/workspace/d2773630-1b78-4cc1-8079-d94a811a4feb/collection/50057853-55e30a0d-f829-423b-8203-730d294a7274?action=share&source=collection_link&creator=50057853"
+  },
+  "item": [
+    {
+      "name": "Get data",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "id": "4f542fe2-166d-4187-8e92-2320c5f8e363",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "id": "2e853d30-6f86-45c4-b923-74c9127eff0e",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/inventory",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "inventory"
+          ]
+        },
+        "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+      },
+      "response": []
+    },
+    {
+      "name": "Post data",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "id": "8541086a-2f70-4927-afa8-056248575a0d",
+            "exec": [
+              "pm.test(\"Successful POST request\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "id": "f1a180b1-55c0-4a24-b447-dce5542793da",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "inventory_name",
+              "value": "ноутбук",
+              "type": "text"
+            },
+            {
+              "key": "description",
+              "value": "тестовий опис",
+              "type": "text"
+            },
+            {
+              "key": "photo",
+              "type": "file",
+              "src": "/C:/Users/poros/Downloads/noutbuk-s-minimalistskim-odnocvetnym-fonom.jpg"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:3000/register",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "register"
+          ]
+        },
+        "description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
+      },
+      "response": []
+    },
+    {
+      "name": "Delete data",
+      "id": "bbe3ffe3-3a5b-46c8-bdc0-4a179c152fb3",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": []
+        },
+        "url": {
+          "raw": "http://localhost:3000/inventory/:id",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "inventory",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": ""
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update data",
+      "id": "e62ea631-3b2b-45ee-b2e9-79d08aef4107",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"name\": \"крутий ноутбук\",\r\n    \"description\":\"крутий тестовий опис\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/inventory/eb43be21-5ef4-4874-817d-424c1d1c2fae",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "inventory",
+            "eb43be21-5ef4-4874-817d-424c1d1c2fae"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "search data",
+      "id": "7d9debe7-1229-4d5b-b303-f28aad575be9",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "id",
+              "value": "75ce40e3-008f-40bc-a52c-aa5a96f58625",
+              "type": "text"
+            },
+            {
+              "key": "has_photo",
+              "value": "true",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:3000/search",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "search"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get certain data",
+      "id": "f8e472f2-fa08-4f23-9617-87d09491910a",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/inventory/:id",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "inventory",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": ""
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get RegisterFile",
+      "id": "c2e4940d-a008-4ecc-a6a8-21fe9c84e955",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/RegisterForm.html",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "RegisterForm.html"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get SearchForm",
+      "id": "f502ea50-c6f6-4a5d-b83b-7048343b619f",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/SearchForm.html",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "SearchForm.html"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get CertainDataPhoto",
+      "id": "2d45903a-07e9-48b1-973b-0c1667f71ff1",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/inventory/:id/photo",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "inventory",
+            ":id",
+            "photo"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "75ce40e3-008f-40bc-a52c-aa5a96f58625"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "PutPhoto",
+      "id": "ff687d69-3d33-428b-9da2-54325d7f16c2",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/inventory/:id/photo",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "inventory",
+            ":id",
+            "photo"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": ""
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
