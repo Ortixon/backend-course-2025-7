@@ -225,7 +225,7 @@ app.use((req, res) => {
 
 // Запуск сервера
 app.listen(serverPort, serverHost, () => {
-  console.log(`Сервер запущено: http://${serverHost}:${serverPort}`);
+  console.log(`Сервер запущено : http://${serverHost}:${serverPort}`);
   console.log(`Документація Swagger: http://${serverHost}:${serverPort}/docs`);
   console.log(`Директорія кешу: ${cacheDir}`);
 }); 

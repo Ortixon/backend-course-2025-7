@@ -11,7 +11,7 @@
   },
   "scripts": {
     "start": "node main.js",
-    "dev": "nodemon --inspect=0.0.0.0:9229 main.js -- -h 0.0.0.0 -p 3000 -c cache"
+    "dev": "nodemon -L --inspect=0.0.0.0:9229 main.js -- -h 0.0.0.0 -p 3000 -c cache"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
