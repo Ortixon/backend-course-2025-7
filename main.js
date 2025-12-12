@@ -7,7 +7,10 @@ const cors = require('cors');
 const crypto = require('crypto');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json'); 
+// 👇 1. Додали бібліотеку для бази даних
+const mysql = require('mysql2/promise');
 
+// --- НАЛАШТУВАННЯ АРГУМЕНТІВ ---
 program
   .requiredOption('-h, --host <type>', 'Адреса сервера')
   .requiredOption('-p, --port <type>', 'Порт сервера')
@@ -15,16 +18,29 @@ program
 
 program.parse(process.argv);
 const options = program.opts();
-const host = options.host;
-const port = options.port;
+const serverHost = options.host;
+const serverPort = options.port;
 const cacheDir = path.resolve(options.cache);
 
+// --- СТВОРЕННЯ КЕШ-ПАПКИ ---
 if (!fs.existsSync(cacheDir)) {
   fs.mkdirSync(cacheDir, { recursive: true });
 }
 
+// 👇 2. Підключення до Бази Даних
+// Беремо дані з .env або ставимо стандартні для Docker
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'db',       // 'db' - це назва сервісу в docker-compose
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD,       // Пароль з .env
+  database: process.env.DB_NAME,           // Ім'я бази з .env
+  port: 3306,                              // ⚠️ Внутрішній порт Docker (не 3307!)
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
 const app = express();
-const db = [];
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, cacheDir),
@@ -38,89 +54,168 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-const findItem = (id) => db.find(i => i.id === id);
-const findIndex = (id) => db.findIndex(i => i.id === id);
+// --- API МЕТОДИ (ПЕРЕПИСАНІ ПІД SQL) ---
 
-app.post('/register', upload.single('photo'), (req, res) => {
-  if (!req.body.inventory_name) {
-    return res.status(400).send('"inventory_name" is required');
+// 1. Створення товару
+app.post('/register', upload.single('photo'), async (req, res) => {
+  try {
+    if (!req.body.inventory_name) {
+      return res.status(400).send('"inventory_name" is required');
+    }
+    
+    // Підготовка даних
+    const id = crypto.randomUUID(); // Генеруємо ID самі (або можна використовувати Auto Increment бази)
+    const name = req.body.inventory_name;
+    const description = req.body.description || '';
+    const photoPath = req.file ? req.file.path : null;
+    const photoUrl = req.file ? `/inventory/${id}/photo` : null;
+
+    // 👇 SQL запит замість db.push
+    const sql = `INSERT INTO items (id, name, description, photo_path, photo_url) VALUES (?, ?, ?, ?, ?)`;
+    // Якщо у тебе в базі поле id - це INT auto_increment, прибери id з запиту.
+    // Але судячи з коду, ти хочеш UUID, тому передаємо його як рядок.
+    
+    await pool.execute(sql, [id, name, description, photoPath, photoUrl]);
+
+    // Повертаємо об'єкт, як він виглядає
+    res.status(201).json({ id, name, description, photoPath, photoUrl });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Database Error');
   }
-  const id = crypto.randomUUID();
-  const newItem = {
-    id: id,
-    name: req.body.inventory_name,
-    description: req.body.description || '',
-    photoPath: req.file ? req.file.path : null,
-    photoUrl: req.file ? `/inventory/${id}/photo` : null
-  };
-  db.push(newItem);
-  res.status(201).json(newItem);
 });
 
-app.post('/search', (req, res) => {
-  const item = findItem(req.body.id);
-  if (!item) {
-    return res.status(404).send('Not Found');
+// 2. Пошук товару
+app.post('/search', async (req, res) => {
+  try {
+    const { id } = req.body;
+    // 👇 SQL запит
+    const [rows] = await pool.execute('SELECT * FROM items WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).send('Not Found');
+    }
+
+    let result = rows[0]; // Беремо перший знайдений елемент
+
+    // Логіка з фото (як було в твоєму коді)
+    if (req.body.has_photo === 'true' && result.photo_url) {
+       // Зверни увагу: поле в базі може називатися photo_url (snake_case) або photoUrl - перевір це
+       // Я використовую photo_url як стандарт для SQL. Якщо в тебе camelCase - зміни тут.
+       result.description = `${result.description} (Фото: ${result.photo_url})`;
+    }
+    res.status(201).json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Database Error');
   }
-  let result = { ...item };
-  if (req.body.has_photo === 'true' && result.photoUrl) {
-    result.description = `${result.description} (Фото: ${result.photoUrl})`;
-  }
-  res.status(201).json(result);
 });
 
-app.get('/inventory', (req, res) => {
-  res.status(200).json(db);
+// 3. Отримати всі товари
+app.get('/inventory', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM items');
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Database Error');
+  }
 });
 
+// 4. Робота з конкретним товаром (GET, PUT, DELETE)
 app.route('/inventory/:id')
-  .get((req, res) => {
-    const item = findItem(req.params.id);
-    return item ? res.status(200).json(item) : res.status(404).send('Not Found');
-  })
-  .put((req, res) => {
-    const item = findItem(req.params.id);
-    if (!item) {
-      return res.status(404).send('Not Found');
+  .get(async (req, res) => {
+    try {
+      const [rows] = await pool.execute('SELECT * FROM items WHERE id = ?', [req.params.id]);
+      return rows.length > 0 ? res.status(200).json(rows[0]) : res.status(404).send('Not Found');
+    } catch (err) {
+      res.status(500).send(err.message);
     }
-    if (req.body.name) item.name = req.body.name;
-    if (req.body.description) item.description = req.body.description;
-    res.status(200).json(item);
   })
-  .delete((req, res) => {
-    const index = findIndex(req.params.id);
-    if (index === -1) {
-      return res.status(404).send('Not Found');
+  .put(async (req, res) => {
+    try {
+      const { name, description } = req.body;
+      const id = req.params.id;
+
+      // Перевіряємо чи існує
+      const [check] = await pool.execute('SELECT * FROM items WHERE id = ?', [id]);
+      if (check.length === 0) return res.status(404).send('Not Found');
+
+      // 👇 Динамічне оновлення (оновлюємо тільки те, що прийшло)
+      // Для простоти оновимо обидва поля, якщо вони є
+      if (name) await pool.execute('UPDATE items SET name = ? WHERE id = ?', [name, id]);
+      if (description) await pool.execute('UPDATE items SET description = ? WHERE id = ?', [description, id]);
+
+      // Отримуємо оновлену версію
+      const [updated] = await pool.execute('SELECT * FROM items WHERE id = ?', [id]);
+      res.status(200).json(updated[0]);
+    } catch (err) {
+      res.status(500).send(err.message);
     }
-    db.splice(index, 1);
-    res.status(200).send('Deleted');
+  })
+  .delete(async (req, res) => {
+    try {
+      // Спочатку знайдемо файл, щоб видалити його (опціонально)
+      const [rows] = await pool.execute('SELECT photo_path FROM items WHERE id = ?', [req.params.id]);
+      
+      const [result] = await pool.execute('DELETE FROM items WHERE id = ?', [req.params.id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).send('Not Found');
+      }
+
+      // Якщо треба видаляти і файл з диска:
+      if (rows.length > 0 && rows[0].photo_path && fs.existsSync(rows[0].photo_path)) {
+         try { fs.unlinkSync(rows[0].photo_path); } catch(e) {}
+      }
+
+      res.status(200).send('Deleted');
+    } catch (err) {
+      res.status(500).send(err.message);
+    }
   })
   .all((req, res) => res.status(405).send('Method Not Allowed'));
 
+// 5. Робота з фото
 app.route('/inventory/:id/photo')
-  .get((req, res) => {
-    const item = findItem(req.params.id);
-    if (!item || !item.photoPath || !fs.existsSync(item.photoPath)) {
-      return res.status(404).send('Photo Not Found');
+  .get(async (req, res) => {
+    try {
+      const [rows] = await pool.execute('SELECT photo_path FROM items WHERE id = ?', [req.params.id]);
+      if (rows.length === 0 || !rows[0].photo_path || !fs.existsSync(rows[0].photo_path)) {
+        return res.status(404).send('Photo Not Found');
+      }
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.sendFile(rows[0].photo_path);
+    } catch (err) {
+      res.status(500).send(err.message);
     }
-    res.setHeader('Content-Type', 'image/jpeg');
-    res.sendFile(item.photoPath);
   })
-  .put(upload.single('photo'), (req, res) => {
-    const item = findItem(req.params.id);
-    if (!item) {
-      return res.status(404).send('Not Found');
+  .put(upload.single('photo'), async (req, res) => {
+    try {
+      const id = req.params.id;
+      const [rows] = await pool.execute('SELECT * FROM items WHERE id = ?', [id]);
+      
+      if (rows.length === 0) return res.status(404).send('Not Found');
+      if (!req.file) return res.status(400).send('File not uploaded');
+
+      // Видаляємо старе фото
+      const oldPath = rows[0].photo_path;
+      if (oldPath && fs.existsSync(oldPath)) {
+          try { fs.unlinkSync(oldPath); } catch(e) {}
+      }
+      
+      const newPath = req.file.path;
+      const newUrl = `/inventory/${id}/photo`;
+
+      await pool.execute('UPDATE items SET photo_path = ?, photo_url = ? WHERE id = ?', [newPath, newUrl, id]);
+      
+      // Повертаємо оновлений об'єкт
+      const [updated] = await pool.execute('SELECT * FROM items WHERE id = ?', [id]);
+      res.status(200).json(updated[0]);
+
+    } catch (err) {
+      res.status(500).send(err.message);
     }
-    if (!req.file) {
-      return res.status(400).send('File not uploaded');
-    }
-    if (item.photoPath && fs.existsSync(item.photoPath)) {
-        try { fs.unlinkSync(item.photoPath); } catch(e) {}
-    }
-    
-    item.photoPath = req.file.path;
-    item.photoUrl = `/inventory/${item.id}/photo`;
-    res.status(200).json(item);
   })
   .all((req, res) => res.status(405).send('Method Not Allowed'));
 
@@ -128,8 +223,9 @@ app.use((req, res) => {
   res.status(404).send('404 - Endpoint Not Found');
 });
 
-app.listen(port, host, () => {
-  console.log(`Сервер запущено: http://${host}:${port}`);
-  console.log(`Документація Swagger: http://${host}:${port}/docs`);
+// Запуск сервера
+app.listen(serverPort, serverHost, () => {
+  console.log(`Сервер запущено: http://${serverHost}:${serverPort}`);
+  console.log(`Документація Swagger: http://${serverHost}:${serverPort}/docs`);
   console.log(`Директорія кешу: ${cacheDir}`);
-});
+}); 

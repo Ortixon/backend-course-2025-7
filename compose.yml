@@ -4,32 +4,34 @@ services:
   app:
     build: .
     ports:
-      - "${PORT}:${PORT}" # Порт береться з файлу .env
+      - "${PORT}:${PORT}"   # Порт сайту (3000)
+      - "9229:9229"         # <--- ВАЖЛИВО: Порт для дебагеру (Chrome Inspect)
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
     environment:
+      - PORT=${PORT}
       - DB_HOST=db
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
     depends_on:
       - db
-    # Команда для запуску з nodemon (гаряче перезавантаження)
     command: npm run dev 
 
   db:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      # Краще брати пароль з .env, щоб він збігався з тим, що в app
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD} 
       MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "3307:3306" # Зовнішній порт 3307, щоб не конфліктувати, якщо у вас є локальний MySQL
+      # Зліва зовнішній порт (для DBeaver), справа внутрішній (MySQL)
+      - "3307:3306"         # <--- ВИПРАВЛЕНО: Було 3000 (конфлікт), стало 3307
     volumes:
       - db_data:/var/lib/mysql
+      - ./db_init:/docker-entrypoint-initdb.d
 
 volumes:
   db_data:

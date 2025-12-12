@@ -2,13 +2,18 @@
   "dependencies": {
     "commander": "^14.0.2",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "multer": "^2.0.2",
-    "nodemon": "^3.1.10",
+    "mysql2": "^3.15.3",
     "superagent": "^10.2.3",
     "swagger-ui-express": "^5.0.1"
   },
   "scripts": {
-    "dev": "nodemon main.js -- -h localhost -p 3000 -c ./uploads"
+    "start": "node main.js",
+    "dev": "nodemon --inspect=0.0.0.0:9229 main.js -- -h 0.0.0.0 -p 3000 -c cache"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
   }
 }
